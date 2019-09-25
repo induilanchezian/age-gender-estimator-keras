@@ -54,7 +54,7 @@ def predict(model, image):
     predictions = model.predict(image)
     return predictions
 
-def FGSM(x, race_label,model,eps=0.3):
+def FGSM(x, race_label,model):
     sess = K.get_session()
     x_adv1 = x #+ (K.random_normal(x.shape) * 0.1)
     x_adv2 = x #+ (K.random_normal(x.shape) * 0.1)
@@ -62,7 +62,8 @@ def FGSM(x, race_label,model,eps=0.3):
     x_adv4 = x #+ (K.random_normal(x.shape) * 0.1)
     x_adv5 = x #+ (K.random_normal(x.shape) * 0.1)
     print(list(map(lambda x: x.name, model.layers)))
-    dense_out = model.get_layer('dense_4').output
+    print(model.summary())
+    dense_out = model.get_layer('dense_3').output
     race_output = model.get_layer('race_output').output
     weights = model.get_layer('race_output').get_weights()
     
@@ -100,7 +101,7 @@ def plot_adversarial(img_list):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, help='Save model path')
-    parser.add_argument('--epsilon', type=float, help='Epsilon for adversarial perturbation')
+    #parser.add_argument('--epsilon', type=float, help='Epsilon for adversarial perturbation')
 
     args = parser.parse_args()
     
@@ -122,7 +123,7 @@ def main():
     print(gender_pred)
     print(race_pred)
 
-    x_adv1, x_adv2, x_adv3, x_adv4, x_adv5 = FGSM(image, np.expand_dims(race_one_hot, axis=0), model, eps=args.epsilon)
+    x_adv1, x_adv2, x_adv3, x_adv4, x_adv5 = FGSM(image, np.expand_dims(race_one_hot, axis=0), model)
 
     predictions = predict(model, x_adv1)
     age_adv_img, race_adv_img, gender_adv_img = predictions

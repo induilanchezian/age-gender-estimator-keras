@@ -58,7 +58,7 @@ def FGSM(x, race_label,model,eps=0.3):
     sess = K.get_session()
     x_adv = x #+ (K.random_normal(x.shape) * 0.1)
     print(list(map(lambda x: x.name, model.layers)))
-    dense_out = model.get_layer('conv2d_14').output
+    dense_out = model.get_layer('dense_3').output
     race_output = model.get_layer('race_output').output
     weights = model.get_layer('race_output').get_weights()
     

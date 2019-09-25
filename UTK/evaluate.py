@@ -53,8 +53,9 @@ def get_adversarial_acc_metric_race(model, eps=0.3, clip_min=0.0, clip_max=1.0):
 def get_adversarial_acc_metric_age(model, eps=0.3, clip_min=0.0, clip_max=1.0):
     def adv_acc(y, _):
         # Generate adversarial examples
-        #y_race = tf.get_default_graph().get_tensor_by_name("race_target:0")
-        x_adv = fgsm(model, y, eps=eps, clip_min=clip_min, clip_max=clip_max)
+        # get the target tensor name by checking y in get_adversarial_acc_metric_race
+        y_race = tf.get_default_graph().get_tensor_by_name("race_output_target_1:0")
+        x_adv = fgsm(model, y_race, eps=eps, clip_min=clip_min, clip_max=clip_max)
         # Consider the attack to be constant
         x_adv = K.stop_gradient(x_adv)
         
@@ -66,8 +67,8 @@ def get_adversarial_acc_metric_age(model, eps=0.3, clip_min=0.0, clip_max=1.0):
 def get_adversarial_acc_metric_gender(model, eps=0.3, clip_min=0.0, clip_max=1.0):
     def adv_acc(y, _):
         # Generate adversarial examples
-        #y_race = tf.get_default_graph().get_tensor_by_name("race_target:0")
-        x_adv = fgsm(model, y, eps=eps, clip_min=clip_min, clip_max=clip_max)
+        y_race = tf.get_default_graph().get_tensor_by_name("race_output_target_1:0")
+        x_adv = fgsm(model, y_race, eps=eps, clip_min=clip_min, clip_max=clip_max)
         # Consider the attack to be constant
         x_adv = K.stop_gradient(x_adv)
         
@@ -132,12 +133,17 @@ def main():
     df['race_id'] = df['race'].map(lambda race: RACE_ID_MAP[race])
     max_age = df['age'].max()
 
-    idx = np.arange(len(df))
-    print(len(df))
-
+    p = np.random.RandomState(10).permutation(len(df))
+    print(p)
+    train_up_to = int(len(df) * TRAIN_TEST_SPLIT)
+    train_idx = p[:train_up_to]
+    test_idx = p[train_up_to:]
+    train_up_to = int(train_up_to * 0.7)
+    train_idx, valid_idx = train_idx[:train_up_to], train_idx[train_up_to:]
+    
     model = load_model(model_file)
 
-    image_generator = get_data_generator(df, idx, max_age, for_training=False, batch_size=batch_size)
+    image_generator = get_data_generator(df, test_idx, max_age, for_training=False, batch_size=batch_size)
 
     opt = SGD(lr=0.001)
     adv_acc_metric_race = get_adversarial_acc_metric_race(model, eps=eps)
@@ -152,14 +158,14 @@ def main():
     )
     
     eval_list = model.evaluate_generator(image_generator,
-            steps=int(len(df) / batch_size))
+            steps=int(len(test_idx) / batch_size))
 
     print(eval_list)
 
     del(model)
     K.clear_session()
  
-    image_generator2 = get_data_generator(df, idx, max_age, for_training=False, batch_size=batch_size)
+    image_generator2 = get_data_generator(df, test_idx, max_age, for_training=False, batch_size=batch_size)
 
     model = load_model(model_file)
     #model.load_weights(model_weights)
@@ -171,7 +177,7 @@ def main():
     )
 
     eval_list = model.evaluate_generator(image_generator2,
-            steps=int(len(df) / batch_size))
+            steps=int(len(test_idx) / batch_size))
 
     print(eval_list)
 
